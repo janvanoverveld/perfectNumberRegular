@@ -14,7 +14,7 @@ function executeSumOfDivisorServers(host:string, ports:number[]){
                             console.log(`data with ${ports[i]}`);
                             console.log(`${data}`);
                          } else {
-                            console.log(`start the output data of ${ports[i]}`);
+                            console.log(`server on port ${ports[i]} is finished`);
                             //console.log(`${data}`);
                             //console.log(`eind the output data of ${ports[i]}`);
                          }
@@ -28,8 +28,8 @@ async function starter(){
    const localhost='localhost';
    const perfectNumberPort=30000;
    const sumOfDivisorServers:number[] = [];
-   const numberOfNumberToCalculate = 5000;
-   const numberOfDivisorServers = 2;
+   const numberOfNumberToCalculate = 10000;
+   const numberOfDivisorServers = 20;
    for ( let port=perfectNumberPort+1
            ; port <= perfectNumberPort + numberOfDivisorServers
            ; port++ ) {
@@ -46,6 +46,10 @@ async function starter(){
       await sendMessage(localhost,sumOfDivisorServers[index] ,msg);
       if ( ++index === sumOfDivisorServers.length ) index = 0;
    }
+   // indicate all numbers are send
+   for ( let i=0; i < sumOfDivisorServers.length; i++){
+      await sendMessage(localhost,sumOfDivisorServers[i], new TO_CALC(localhost, perfectNumberPort,-1) );
+   }
    //for ( let i=10; i<20; i++ ){
       //console.log(`perfectNumberServer, sending ${i}`);
       //const msg = new TO_CALC(localhost,perfectNumberPort,i);
@@ -57,9 +61,6 @@ async function starter(){
       const numberWithDivisor = await getNumberWithDivisor();
       if ( numberWithDivisor.sumOfDivisors === numberWithDivisor.valueToCalculate )
          console.log(`perfect number ${numberWithDivisor.valueToCalculate}`);
-   }
-   for ( let i=0; i < sumOfDivisorServers.length; i++){
-      await sendMessage(localhost,sumOfDivisorServers[i], new TO_CALC(localhost, perfectNumberPort,-1) );
    }
    perfectNumberServer.terminate();
    console.timeEnd("perfectNumberTiming");

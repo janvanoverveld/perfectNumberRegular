@@ -3,6 +3,8 @@ import {perfectNumberServer} from './perfectNumberServer';
 import {Message,CALC,RESULT,BYE} from './Messages';
 import {sendMessage} from './sendMessage';
 
+const sleep:(ms:number) => void = async (m) => new Promise(resolve => setTimeout(resolve, m));
+
 function executeSumOfDivisorServers(host:string, ports:number[]){
     for ( let i=0; i<ports.length; i++ ) {
        //console.log(`start sumOfDivisor ${host} server for port ${ports[i]}   ${new Date()} `);
@@ -43,7 +45,13 @@ async function starter(){
    for ( let i=0; i<numberOfNumberToCalculate; i++ ){
       //console.log(`perfectNumberServer, sending ${i}`);
       const msg = new CALC(localhost,perfectNumberPort,i);
-      await sendMessage(localhost,sumOfDivisorServers[index] ,msg);
+      try{
+         await sendMessage(localhost,sumOfDivisorServers[index],msg);
+      } catch (e){
+         console.log(`sleep en try again ${sumOfDivisorServers[index]}`);
+         await sleep(500);
+         await sendMessage(localhost,sumOfDivisorServers[index],msg);
+      }
       if ( ++index === sumOfDivisorServers.length ) index = 0;
    }
    // indicate all numbers are send

@@ -7,8 +7,13 @@ var resolver: ((item: Message) => void) | null = null;
 
 function getSumOfDivisors(numberToCheck:number):number{
    let   sumDivisors = 0;
-   const array:Array<void> = new Array( Math.ceil(numberToCheck/2) + 1 );
-   array.filter( (v,i)=>numberToCheck%i===0 ).forEach( (v,i) => sumDivisors += i );
+   const halfOfNumberToCheck = Math.ceil(numberToCheck/2);
+   for ( let i=halfOfNumberToCheck; i>0; i-- ){
+      if ( numberToCheck%i === 0 ){
+         sumDivisors += i;
+         if ( sumDivisors > numberToCheck ) break;
+      }
+   }
    return sumDivisors;
 }
 

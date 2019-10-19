@@ -1,38 +1,51 @@
 import * as http from 'http';
-import {TO_CALC,SUM_OF_DIVISORS} from './Messages';
+import {CALC,RESULT,Message, BYE} from './Messages';
 import {sendMessage} from './sendMessage';
 
-var sumOfDivisorServerHost='localhost';
-var sumOfDivisorServerPortNumber=0;
+const messages:Message[] = [];
+var resolver: ((item: Message) => void) | null = null;
 
 function getSumOfDivisors(numberToCheck:number):number{
-    const halfOfNumberToCheck = Math.ceil(numberToCheck/2) + 1;
-    let   sumDivisors = 0;
-    for ( let j=1; j<numberToCheck; j++){
-       if (numberToCheck%j===0) sumDivisors += j;
-       if (halfOfNumberToCheck<j) break;
-    }
-    return sumDivisors;
+   let   sumDivisors = 0;
+   const array:Array<void> = new Array( Math.ceil(numberToCheck/2) + 1 );
+   array.filter( (v,i)=>numberToCheck%i===0 ).forEach( (v,i) => sumDivisors += i );
+   return sumDivisors;
 }
 
-var sumOfDivisorsServerActive:boolean = true;
+async function getMessage(): Promise<Message> {
+    let promise = new Promise<Message>((resolve, reject) => resolver = resolve );
+    tryResolve();
+    return promise;
+}
 
-const numberArray:TO_CALC[] = [];
+function tryResolve(): void {
+   if ( resolver ) {
+       let item: Message|undefined = undefined;
+       item = messages.shift();
+       if (item) {
+           resolver(item);
+           resolver = null;
+       }
+   }
+}
 
-function processNumbers(){
-   const numberToProcess = numberArray.shift();
-   if (numberToProcess){
-      if (numberToProcess.valueToCalculate === -1) terminate();
-      else {
-        const sumOfDivisors = getSumOfDivisors(numberToProcess.valueToCalculate);
-        //console.log(`sumOfDivisorServer, sending calculated number ${numberToProcess.valueToCalculate}  and the summation of divisors is ${sumOfDivisors}`);
-        const msg:SUM_OF_DIVISORS=new SUM_OF_DIVISORS(sumOfDivisorServerHost,sumOfDivisorServerPortNumber,numberToProcess.valueToCalculate,sumOfDivisors);
-        sendMessage(numberToProcess.hostFrom,numberToProcess.portFrom,msg);
-        setImmediate( () => processNumbers() );
+async function processNumbers(host:string,port:number){
+   let msg = await getMessage();
+   while (true){
+      if (msg.name === CALC.name) {
+         const calcMessage = <CALC> msg;
+         const sumOfDivisors = getSumOfDivisors(calcMessage.valueToCalculate);
+         //console.log(`sumOfDivisorServer, sending calculated number ${numberToProcess.valueToCalculate}  and the summation of divisors is ${sumOfDivisors}`);
+         const resultMsg:RESULT=new RESULT(host,port,calcMessage.valueToCalculate,sumOfDivisors);
+         await sendMessage(calcMessage.hostFrom,calcMessage.portFrom,resultMsg);
+         msg = await getMessage();
       }
-   } else {
-      if (!sumOfDivisorsServerActive) return;
-      setTimeout( () => processNumbers(), 2000 );
+      if ( msg.name === BYE.name) {
+         const byeMessage = <BYE> msg;
+         await sendMessage(byeMessage.hostFrom,byeMessage.portFrom, new BYE(host,port));
+         terminate();
+         break;
+      }
    }
 }
 
@@ -42,7 +55,8 @@ function httpSumOfDivisorServerFunction(req:http.IncomingMessage,res:http.Server
       let postData:string;
       req.on('data', (data) => { postData = (postData===undefined)?data: postData+data; });
       req.on('end',  () => { try { //console.log(`sumOfDivisorServer, bericht ontvangen  ${postData}`);
-                                   numberArray.push(JSON.parse(postData));
+                                   messages.push(JSON.parse(postData));
+                                   tryResolve();
                                    res.writeHead(200, "OK", httpHeaders);
                                    res.end();
                              }
@@ -55,25 +69,11 @@ function httpSumOfDivisorServerFunction(req:http.IncomingMessage,res:http.Server
 }
 
 const httpSumOfDivisorServer:http.Server = http.createServer(httpSumOfDivisorServerFunction);
+const start:(port:number)=>void = (p) => httpSumOfDivisorServer.listen(p);
+const terminate: () => void = () => httpSumOfDivisorServer.close();
 
-function start(host:string, port:number){
-    sumOfDivisorServerHost = host;
-    sumOfDivisorServerPortNumber = port;
-    httpSumOfDivisorServer.listen(sumOfDivisorServerPortNumber);
-    processNumbers();
-}
-
-function terminate(){
-        setTimeout(
-           () => { sumOfDivisorsServerActive = false;
-            httpSumOfDivisorServer.close();
-                   console.log(`sum of Divisor ${sumOfDivisorServerHost} Server for port ${sumOfDivisorServerPortNumber} is being terminated`);
-                 }, 5000 );
-}
-
-const sumOfDivisorsServer = {
-    start: start
-,   terminate:terminate
+const sumOfDivisorsServer = { start: start
+,                         terminate: terminate
 }
 
 function starter(pars:string[]){
@@ -81,7 +81,8 @@ function starter(pars:string[]){
   if (pars[2] && pars[3]) {
     const host:string = pars[2];
     const port:number = Number(pars[3]);
-    sumOfDivisorsServer.start(host,port);
+    sumOfDivisorsServer.start(port);
+    processNumbers(host,port);
   }
 }
 

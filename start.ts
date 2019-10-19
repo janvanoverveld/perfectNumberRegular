@@ -1,6 +1,6 @@
 import * as child from 'child_process';
-import {getNumberWithDivisor,perfectNumberServer} from './perfectNumberServer';
-import {Message,TO_CALC,SUM_OF_DIVISORS} from './Messages';
+import {perfectNumberServer} from './perfectNumberServer';
+import {Message,CALC,RESULT,BYE} from './Messages';
 import {sendMessage} from './sendMessage';
 
 function executeSumOfDivisorServers(host:string, ports:number[]){
@@ -29,7 +29,7 @@ async function starter(){
    const perfectNumberPort=30000;
    const sumOfDivisorServers:number[] = [];
    const numberOfNumberToCalculate = 10000;
-   const numberOfDivisorServers = 20;
+   const numberOfDivisorServers = 10;
    for ( let port=perfectNumberPort+1
            ; port <= perfectNumberPort + numberOfDivisorServers
            ; port++ ) {
@@ -42,25 +42,22 @@ async function starter(){
    let index=0;
    for ( let i=0; i<numberOfNumberToCalculate; i++ ){
       //console.log(`perfectNumberServer, sending ${i}`);
-      const msg = new TO_CALC(localhost,perfectNumberPort,i);
+      const msg = new CALC(localhost,perfectNumberPort,i);
       await sendMessage(localhost,sumOfDivisorServers[index] ,msg);
       if ( ++index === sumOfDivisorServers.length ) index = 0;
    }
    // indicate all numbers are send
    for ( let i=0; i < sumOfDivisorServers.length; i++){
-      await sendMessage(localhost,sumOfDivisorServers[i], new TO_CALC(localhost, perfectNumberPort,-1) );
+      await sendMessage(localhost,sumOfDivisorServers[i], new BYE(localhost, perfectNumberPort) );
    }
-   //for ( let i=10; i<20; i++ ){
-      //console.log(`perfectNumberServer, sending ${i}`);
-      //const msg = new TO_CALC(localhost,perfectNumberPort,i);
-      //await sendMessage(localhost,sumOfDivisorServers[1] ,msg);
-   // }
+   let byeCounter=0;
    console.log(`perfectNumberServer, wachten op getallen`);
-   for ( let i=0; i<numberOfNumberToCalculate; i++ ){
+   while ( byeCounter < numberOfDivisorServers ){
       //console.log(`perfectNumberServer, wachten op ${i}`);
-      const numberWithDivisor = await getNumberWithDivisor();
-      if ( numberWithDivisor.sumOfDivisors === numberWithDivisor.valueToCalculate )
-         console.log(`perfect number ${numberWithDivisor.valueToCalculate}`);
+      const msg = await perfectNumberServer.getMessage();
+      if ( msg && msg.name === RESULT.name && (<RESULT>msg).sumOfDivisors === (<RESULT>msg).valueToCalculate )
+         console.log(`perfect number ${(<RESULT>msg).valueToCalculate}`);
+      if ( msg && msg.name === BYE.name ) byeCounter++;
    }
    perfectNumberServer.terminate();
    console.timeEnd("perfectNumberTiming");

@@ -2,14 +2,20 @@ export abstract class Message {
     constructor(public name:string, public hostFrom:string, public portFrom:number){};
 }
 
-export class TO_CALC extends Message{
-    constructor(public hostFrom:string, public portFrom:number, public valueToCalculate:number){
-        super(TO_CALC.name, hostFrom, portFrom);
+export class CALC extends Message{
+    constructor(hostFrom:string, portFrom:number, public valueToCalculate:number){
+        super(CALC.name, hostFrom, portFrom);
     }
 }
 
-export class SUM_OF_DIVISORS extends Message {
-    constructor(public hostFrom:string, public portFrom:number, public valueToCalculate:number, public sumOfDivisors:number){
-        super(SUM_OF_DIVISORS.name,hostFrom,portFrom);
+export class RESULT extends Message {
+    constructor(hostFrom:string, portFrom:number, public valueToCalculate:number, public sumOfDivisors:number){
+        super(RESULT.name,hostFrom,portFrom);
+    }
+}
+
+export class BYE extends Message {
+    constructor(hostFrom:string, portFrom:number) {
+        super(BYE.name,hostFrom,portFrom);
     }
 }

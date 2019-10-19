@@ -1,7 +1,7 @@
 import * as http from 'http';
-import {SUM_OF_DIVISORS} from './Messages';
+import {Message} from './Messages';
 
-const numberAndSumOfDivisorArray:SUM_OF_DIVISORS[] = [];
+const numberAndSumOfDivisorArray:Message[] = [];
 
 function httpPerfectNumberServerFunction(req:http.IncomingMessage,res:http.ServerResponse):void {
    const httpHeaders = {'cache-control':'no-cache','Content-Type':'application/json','charset':'utf-8'};
@@ -9,10 +9,9 @@ function httpPerfectNumberServerFunction(req:http.IncomingMessage,res:http.Serve
       let postData:string;
       req.on('data', (data) => { postData = (postData===undefined)?data: postData+data; });
       req.on('end',  () => { try { //console.log(`perfectNumberServer, bericht ontvangen  ${postData}`);
-                                   const numberWithSumOfDivisors:SUM_OF_DIVISORS = JSON.parse(postData);
-                                   numberAndSumOfDivisorArray.push(numberWithSumOfDivisors);
+                                   const msg:Message = JSON.parse(postData);
+                                   numberAndSumOfDivisorArray.push(msg);
                                    tryResolver();
-                                   //numberArray.push(JSON.parse(postData).numberToCalculate);
                                    res.writeHead(200, "OK", httpHeaders);
                                    res.end();
                              }
@@ -24,25 +23,11 @@ function httpPerfectNumberServerFunction(req:http.IncomingMessage,res:http.Serve
    res.writeHead(404, "page not found", httpHeaders);
 }
 
-var httpServerPerfectNumber:http.Server = http.createServer(httpPerfectNumberServerFunction);
+const httpServerPerfectNumber:http.Server = http.createServer(httpPerfectNumberServerFunction);
+const start:(port:number)=>void = (p) => httpServerPerfectNumber.listen(p);
+const terminate:()=>void = () =>  httpServerPerfectNumber.close();
 
-function start(port:number){
-   httpServerPerfectNumber.listen(port);
-}
-
-function terminate(){
-        setTimeout(
-           () => { httpServerPerfectNumber.close();
-                   console.log('perfectNumberServer, server is afgebroken, het protocol wordt nu geeindigd');
-                 }, 5000 );
-}
-
-const perfectNumberServer = {
-    start: start
-,   terminate:terminate
-}
-
-let resolver: ((item: SUM_OF_DIVISORS) => void) | null = null;
+var resolver: ((item: Message) => void) | null = null;
 
 function tryResolver() {
    if ( resolver ) {
@@ -51,11 +36,15 @@ function tryResolver() {
    }
 }
 
-async function getNumberWithDivisor(): Promise<SUM_OF_DIVISORS> {
-   let promise = new Promise<SUM_OF_DIVISORS>( resolve => resolver = resolve );
+async function getMessage(): Promise<Message> {
+   const promise = new Promise<Message>( resolve => resolver = resolve );
    tryResolver();
    return promise;
 }
 
-export {getNumberWithDivisor,perfectNumberServer}
+const perfectNumberServer = { start: start
+,                         terminate: terminate
+,                        getMessage: getMessage
+}
 
+export {perfectNumberServer}

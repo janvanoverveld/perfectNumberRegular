@@ -25,13 +25,17 @@ function executeSumOfDivisorServers(host:string, ports:number[]){
     }
  };
 
-async function starter(){
+async function starter(pars:string[]){
    console.time("perfectNumberTiming");
+   let numberOfNumberToCalculate = 100000;   
+   let numberGroupSize=10000;
+   if (pars[2]) numberOfNumberToCalculate = Number(pars[2]);
+   if (pars[3]) numberGroupSize = Number(pars[3]);
+   console.log(`total numbers to process  = ${numberOfNumberToCalculate}`);
+   console.log(`size of groups of numbers = ${numberGroupSize}`);
    const localhost='localhost';
    const perfectNumberPort=30000;
    const sumOfDivisorServers:number[] = [];
-   const numberOfNumberToCalculate = 100000;
-   const numberGroupSize=1000;
    const numberOfDivisorServers = 10;
    for ( let port=perfectNumberPort+1
            ; port <= perfectNumberPort + numberOfDivisorServers
@@ -72,4 +76,4 @@ async function starter(){
    console.timeEnd("perfectNumberTiming");
 }
 
-starter();
+starter(process.argv);

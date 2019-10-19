@@ -39,10 +39,17 @@ async function processNumbers(host:string,port:number){
    while (true){
       if (msg.name === CALC.name) {
          const calcMessage = <CALC> msg;
-         const sumOfDivisors = getSumOfDivisors(calcMessage.valueToCalculate);
+         const mapWithSumOfDivisors:Map<number,number>=new Map();
+         for ( let i = calcMessage.valueToCalculateFrom; i <= calcMessage.valueToCalculateTo; i++ ){
+            mapWithSumOfDivisors.set(i,getSumOfDivisors(i));
+         }
          //console.log(`sumOfDivisorServer, sending calculated number ${numberToProcess.valueToCalculate}  and the summation of divisors is ${sumOfDivisors}`);
-         const resultMsg:RESULT=new RESULT(host,port,calcMessage.valueToCalculate,sumOfDivisors);
-         await sendMessage(calcMessage.hostFrom,calcMessage.portFrom,resultMsg);
+         for ( let [key,value] of mapWithSumOfDivisors ){
+            if (key === value ){
+               const resultMsg:RESULT=new RESULT(host,port,key,value);
+               await sendMessage(calcMessage.hostFrom,calcMessage.portFrom,resultMsg);
+            }
+         }
          msg = await getMessage();
       }
       if ( msg.name === BYE.name) {

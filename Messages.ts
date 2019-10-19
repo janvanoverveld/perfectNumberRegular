@@ -3,7 +3,7 @@ export abstract class Message {
 }
 
 export class CALC extends Message{
-    constructor(hostFrom:string, portFrom:number, public valueToCalculate:number){
+    constructor(hostFrom:string, portFrom:number, public valueToCalculateFrom:number, public valueToCalculateTo:number){
         super(CALC.name, hostFrom, portFrom);
     }
 }

@@ -30,7 +30,8 @@ async function starter(){
    const localhost='localhost';
    const perfectNumberPort=30000;
    const sumOfDivisorServers:number[] = [];
-   const numberOfNumberToCalculate = 10000;
+   const numberOfNumberToCalculate = 100000;
+   const numberGroupSize=1000;
    const numberOfDivisorServers = 10;
    for ( let port=perfectNumberPort+1
            ; port <= perfectNumberPort + numberOfDivisorServers
@@ -42,9 +43,9 @@ async function starter(){
    perfectNumberServer.start(perfectNumberPort);
    console.log(`perfectNumberServer, versturen van getallen`);
    let index=0;
-   for ( let i=0; i<numberOfNumberToCalculate; i++ ){
+   for ( let i=0; i<numberOfNumberToCalculate; i += numberGroupSize ){
       //console.log(`perfectNumberServer, sending ${i}`);
-      const msg = new CALC(localhost,perfectNumberPort,i);
+      const msg = new CALC(localhost,perfectNumberPort,i,(i+numberGroupSize-1));
       try{
          await sendMessage(localhost,sumOfDivisorServers[index],msg);
       } catch (e){

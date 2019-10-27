@@ -35,25 +35,24 @@ function tryResolve(): void {
 }
 
 async function processNumbers(host:string,port:number){
+   const calcMessagesArray:CALC[] = [];
    let msg = await getMessage();
    while (true){
       if (msg.name === CALC.name) {
-         const calcMessage = <CALC> msg;
-         const mapWithSumOfDivisors:Map<number,number>=new Map();
-         for ( let i = calcMessage.valueToCalculateFrom; i <= calcMessage.valueToCalculateTo; i++ ){
-            mapWithSumOfDivisors.set(i,getSumOfDivisors(i));
-         }
-         //console.log(`sumOfDivisorServer, sending calculated number ${numberToProcess.valueToCalculate}  and the summation of divisors is ${sumOfDivisors}`);
-         for ( let [key,value] of mapWithSumOfDivisors ){
-            if (key === value ){
-               const resultMsg:RESULT=new RESULT(host,port,key,value);
-               await sendMessage(calcMessage.hostFrom,calcMessage.portFrom,resultMsg);
-            }
-         }
+         calcMessagesArray.push(<CALC>msg);
          msg = await getMessage();
       }
       if ( msg.name === BYE.name) {
          const byeMessage = <BYE> msg;
+         for ( const calc of calcMessagesArray ){
+            for ( let i=calc.valueToCalculateFrom; i<=calc.valueToCalculateTo; i++){
+               const sumOfDivisors = getSumOfDivisors(i);
+               if ( i === sumOfDivisors ){
+                  const resultMsg:RESULT=new RESULT(host,port,i,sumOfDivisors);
+                  await sendMessage(calc.hostFrom, calc.portFrom,resultMsg);
+               }
+            }
+         }
          await sendMessage(byeMessage.hostFrom,byeMessage.portFrom, new BYE(host,port));
          terminate();
          break;

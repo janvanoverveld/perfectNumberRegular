@@ -36,7 +36,7 @@ async function starter(pars:string[]){
    const localhost='localhost';
    const perfectNumberPort=30000;
    const sumOfDivisorServers:number[] = [];
-   const numberOfDivisorServers = 10;
+   const numberOfDivisorServers = 5;
    for ( let port=perfectNumberPort+1
            ; port <= perfectNumberPort + numberOfDivisorServers
            ; port++ ) {

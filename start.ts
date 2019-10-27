@@ -26,7 +26,6 @@ function executeSumOfDivisorServers(host:string, ports:number[]){
  };
 
 async function starter(pars:string[]){
-   console.time("perfectNumberTiming");
    let numberOfNumberToCalculate = 100000;   
    let numberGroupSize=10000;
    if (pars[2]) numberOfNumberToCalculate = Number(pars[2]);
@@ -44,6 +43,7 @@ async function starter(pars:string[]){
               sumOfDivisorServers.push(port);
    }
    executeSumOfDivisorServers(localhost,sumOfDivisorServers);
+   console.time("perfectNumberTiming");
    perfectNumberServer.start(perfectNumberPort);
    console.log(`perfectNumberServer, versturen van getallen`);
    let index=0;

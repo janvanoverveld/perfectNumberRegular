@@ -106,20 +106,23 @@ var groupResolver: ( () => void) | null = null;
 async function startGroup(groupSize:number){
    let promise = new Promise<void>( resolve => groupResolver = resolve );
    console.log(`groupSize ${groupSize}`);
-   let totalNumbers:number = 100000;
+   let totalNumbers:number = 0;
    let timing=0;
-   timing = await startCountNumbers(totalNumbers,groupSize);
-   //console.log(`${totalNumbers}  doet er ${timing}  seconden over`);
+   //
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
-   totalNumbers += 100000;
-   timing = await startCountNumbers(totalNumbers,groupSize);
-   //console.log(`${totalNumbers}  doet er ${timing}  seconden over`);
-   logTiming(`${groupSize};${totalNumbers};${timing}`);   
-   totalNumbers += 100000;
-   startCountNumbers(totalNumbers,groupSize).then( (t) => {
-      timing = t;
-      //console.log(`${totalNumbers}  doet er ${timing}  seconden over`);
-      logTiming(`${groupSize};${totalNumbers};${timing}`);      
+   //
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   //
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   //
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   //
+   startCountNumbers(totalNumbers+=100000,groupSize).then( (t) => {
+      logTiming(`${groupSize};${totalNumbers};${t}`);
       if (groupResolver) groupResolver();
    } );
    return promise;

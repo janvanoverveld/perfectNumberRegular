@@ -25,7 +25,17 @@ function httpPerfectNumberServerFunction(req:http.IncomingMessage,res:http.Serve
 
 const httpServerPerfectNumber:http.Server = http.createServer(httpPerfectNumberServerFunction);
 const start:(port:number)=>void = (p) => httpServerPerfectNumber.listen(p);
-const terminate:()=>void = () =>  httpServerPerfectNumber.close();
+
+var terminateResolver: (() => void) | null = null;
+
+async function terminate() {
+   let promise = new Promise<void>( resolve => terminateResolver = resolve );
+   httpServerPerfectNumber.close( (err) => {
+      if ( err ) console.log(`httpServerPerfectNumber error bij terminate ${err}`);
+      if ( terminateResolver) terminateResolver();
+   } );
+   return promise;
+}
 
 var resolver: ((item: Message) => void) | null = null;
 

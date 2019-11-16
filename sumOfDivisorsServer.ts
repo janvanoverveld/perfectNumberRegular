@@ -81,7 +81,8 @@ function httpSumOfDivisorServerFunction(req:http.IncomingMessage,res:http.Server
 
 const httpSumOfDivisorServer:http.Server = http.createServer(httpSumOfDivisorServerFunction);
 const start:(port:number)=>void = (p) => httpSumOfDivisorServer.listen(p);
-const terminate: () => void = () => httpSumOfDivisorServer.close();
+
+function terminate(){ setTimeout( () => httpSumOfDivisorServer.close(), 50 );}
 
 const sumOfDivisorsServer = { start: start
 ,                         terminate: terminate

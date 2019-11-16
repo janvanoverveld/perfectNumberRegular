@@ -1,20 +1,29 @@
 import * as child from 'child_process';
-import {perfectNumberServer} from './perfectNumberServer';
-import {Message,CALC,RESULT,BYE} from './Messages';
-import {sendMessage} from './sendMessage';
 import * as fs from 'fs';
 
 const tempLOGFOLDER = "log/";
-var loggerPerfectNumberResults = fs.createWriteStream( tempLOGFOLDER + 'perfectNumberResults.txt', { flags: 'w' });
-var logPerfectNumberResults    = (tekst:string) => { loggerPerfectNumberResults.write(tekst+'\r\n');};
 var loggerTiming               = fs.createWriteStream( tempLOGFOLDER + 'timingResults.txt', { flags: 'w' });
 var logTiming                  = (tekst:string) => { loggerTiming.write(tekst+'\r\n');};
 
-//const sleep:(ms:number) => void = async (m) => new Promise(resolve => setTimeout(resolve, m));
+const sleep:(ms:number) => void = async (m) => new Promise(resolve => setTimeout(resolve, m));
+
+var perfectNumberResolver: (() => void) | null = null;
+
+async function executePerfectNumberServer(host:string, port:number, totalNumbers:number, groupSize:number ){
+   let promise = new Promise( resolve => perfectNumberResolver = resolve );
+   console.log(`node perfectNumberServer.js ${host} ${port} ${totalNumbers} ${groupSize}`);
+   child.exec( `node perfectNumberServer.js ${host} ${port} ${totalNumbers} ${groupSize}`
+   , {cwd:`./js`}
+   , (err,data) => { if (err){ console.log(`error executePerfectNumberServer`);
+                               console.log(`${err}`); };
+                     console.log(`resolve van perfectNumberServer`);
+                     if (perfectNumberResolver) perfectNumberResolver();
+                   } );
+   return promise;
+};
 
 function executeSumOfDivisorServers(host:string, ports:number[]){
     for ( let i=0; i<ports.length; i++ ) {
-       //console.log(`start sumOfDivisor ${host} server for port ${ports[i]}   ${new Date()} `);
        child.exec( `node sumOfDivisorsServer.js ${host} ${ports[i]}`
        , {cwd:`./js`}
        , (err,data) => { if (err){
@@ -23,63 +32,34 @@ function executeSumOfDivisorServers(host:string, ports:number[]){
                             console.log(`data with ${ports[i]}`);
                             console.log(`${data}`);
                          }
-                           //else {
-                            //console.log(`server on port ${ports[i]} is finished`);
-                            //console.log(`${data}`);
-                            //console.log(`eind the output data of ${ports[i]}`);
-                           //}
+                         //console.log(`sumOfDivisorsServer.js is opgestart ${ports[i]}`);
                        } );
-       //console.log(`eind sumOfDivisor server for port ${ports[i]}   ${new Date()} `);
     }
 };
 
-var resolver: (() => void) | null = null;
+var globalStartPortNumber=30000;
 
 async function starter(numberOfNumberToCalculate:number, numberGroupSize:number){
-   let promise = new Promise<void>( resolve => resolver = resolve );
    const localhost='localhost';
-   const perfectNumberPort=30000;
    const sumOfDivisorServers:number[] = [];
-   const numberOfDivisorServers = 5;
-   for ( let port=perfectNumberPort+1
-           ; port <= perfectNumberPort + numberOfDivisorServers
-           ; port++ ) {
-              //console.log(`pushing port ${port}`);
-              sumOfDivisorServers.push(port);
+   const perfectNumberPort = globalStartPortNumber++;
+   for ( let i=0; i< 5; i++ ) {
+      //console.log(`pushing port ${globalStartPortNumber}`);
+      sumOfDivisorServers.push(globalStartPortNumber++);
    }
+   //console.log(`start execute divisors servers`);
    executeSumOfDivisorServers(localhost,sumOfDivisorServers);
-   //console.time("perfectNumberTiming");
-   perfectNumberServer.start(perfectNumberPort);
-   //console.log(`perfectNumberServer, versturen van getallen`);
-   let index=0;
-   for ( let i=0; i<numberOfNumberToCalculate; i += numberGroupSize ){
-      //console.log(`perfectNumberServer, sending ${i}`);
-      const msg = new CALC(localhost,perfectNumberPort,i,(i+numberGroupSize-1));
-      await sendMessage(localhost,sumOfDivisorServers[index],msg);
-      if ( ++index === sumOfDivisorServers.length ) index = 0;
-   }
-   // indicate all numbers are send
-   for ( let i=0; i < sumOfDivisorServers.length; i++){
-      await sendMessage(localhost,sumOfDivisorServers[i], new BYE(localhost, perfectNumberPort) );
-   }
-   let byeCounter=0;
-   //console.log(`perfectNumberServer, wachten op getallen`);
-   const perfectNumberArray:number[] = [];
-   while ( byeCounter < numberOfDivisorServers ){
-      //console.log(`perfectNumberServer, wachten op ${i}`);
-      const msg = await perfectNumberServer.getMessage();
-      if ( msg && msg.name === RESULT.name && (<RESULT>msg).sumOfDivisors === (<RESULT>msg).valueToCalculate )
-         //console.log(`perfect number ${(<RESULT>msg).valueToCalculate}`);
-         perfectNumberArray.push((<RESULT>msg).valueToCalculate);
-      if ( msg && msg.name === BYE.name ) byeCounter++;
-   }
-   perfectNumberServer.terminate().then( () => {
-      //console.log(`${perfectNumberArray}`);
-      logPerfectNumberResults(`${numberOfNumberToCalculate}-${numberGroupSize}-->${perfectNumberArray}`);
-      if (resolver) resolver();
-   });
-   //console.timeEnd("perfectNumberTiming");
-   return promise;
+   //console.log(`slapen`);
+   // give divisors servers time to startup
+   await sleep(100);
+   //console.log(`starten perfect number server`);
+   let bla1 = new Date();
+   await executePerfectNumberServer (localhost,perfectNumberPort,numberOfNumberToCalculate,numberGroupSize);
+   let bla2 = new Date();
+   let timeDiff = bla2.getTime() - bla1.getTime();
+   timeDiff /= 1000; // strip the ms
+   const seconds = Math.round(timeDiff);
+   console.log( `bla ${numberOfNumberToCalculate} : ${seconds} seconds`);
 }
 
 var timingResolver: ( (number) => void) | null = null;
@@ -105,32 +85,71 @@ var groupResolver: ( () => void) | null = null;
 
 async function startGroup(groupSize:number){
    let promise = new Promise<void>( resolve => groupResolver = resolve );
-   console.log(`groupSize ${groupSize}`);
+   //console.log(`groupSize ${groupSize}`);
    let totalNumbers:number = 0;
    let timing=0;
-   //
+   // 1
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
-   //
+   // 2
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
-   //
+   // 3
+   /*
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
-   //
+   // 4
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
-   //
+   // 5
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   // 6
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   // 7
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   // 8
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   // 9
+   timing = await startCountNumbers(totalNumbers+=100000,groupSize);
+   logTiming(`${groupSize};${totalNumbers};${timing}`);
+   */
+   // 10
    startCountNumbers(totalNumbers+=100000,groupSize).then( (t) => {
-      logTiming(`${groupSize};${totalNumbers};${t}`);
+      const logText = `${groupSize};${totalNumbers};${t}`;
+      console.log(logText);
+      logTiming(logText);
       if (groupResolver) groupResolver();
    } );
    return promise;
 }
 
 async function startMulti(){
-   let groupSize:number = 100;
-   await startGroup(groupSize);
+   //1
+   await startGroup(100);
+   await startGroup(1000);
+   await startGroup(10000);
+   //2
+   /*
+   await startGroup(100);
+   await startGroup(1000);
+   await startGroup(10000);
+   //3
+   await startGroup(100);
+   await startGroup(1000);
+   await startGroup(10000);
+   //4
+   await startGroup(100);
+   await startGroup(1000);
+   await startGroup(10000);
+   //5
+   await startGroup(100);
+   await startGroup(1000);
+   await startGroup(10000);
+   */
 }
 
 startMulti();

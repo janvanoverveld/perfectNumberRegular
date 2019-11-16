@@ -95,7 +95,6 @@ async function startGroup(groupSize:number){
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
    // 3
-   /*
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
    // 4
@@ -116,7 +115,6 @@ async function startGroup(groupSize:number){
    // 9
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
-   */
    // 10
    startCountNumbers(totalNumbers+=100000,groupSize).then( (t) => {
       const logText = `${groupSize};${totalNumbers};${t}`;

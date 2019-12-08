@@ -86,7 +86,6 @@ async function startGroup(groupSize:number){
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
    // 2
-   /*
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
    // 3
@@ -110,7 +109,6 @@ async function startGroup(groupSize:number){
    // 9
    timing = await startCountNumbers(totalNumbers+=100000,groupSize);
    logTiming(`${groupSize};${totalNumbers};${timing}`);
-   */
    // 10
    startCountNumbers(totalNumbers+=100000,groupSize).then( (t) => {
       const logText = `${groupSize};${totalNumbers};${t}`;
@@ -124,10 +122,9 @@ async function startGroup(groupSize:number){
 async function startMulti(){
    //1
    await startGroup(100);
-   //await startGroup(1000);
-   //await startGroup(10000);
+   await startGroup(1000);
+   await startGroup(10000);
    //2
-   /*
    await startGroup(100);
    await startGroup(1000);
    await startGroup(10000);
@@ -143,7 +140,6 @@ async function startMulti(){
    await startGroup(100);
    await startGroup(1000);
    await startGroup(10000);
-   */
 }
 
 startMulti();

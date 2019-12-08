@@ -1,69 +1,55 @@
-import {Message,CALC,RESULT,BYE} from './Messages';
-import {sendMessage} from './sendMessage';
 import * as http from 'http';
+import * as request from 'request';
 import * as fs from 'fs';
 
-const numberAndSumOfDivisorArray:Message[] = [];
+const httpHeaders = {'cache-control':'no-cache','Content-Type':'application/json','charset':'utf-8'};
+var   messageResolver: (msg: any) => void;
 
-function httpPerfectNumberServerFunction(req:http.IncomingMessage,res:http.ServerResponse):void {
-   const httpHeaders = {'cache-control':'no-cache','Content-Type':'application/json','charset':'utf-8'};
-   if ( req.method === 'POST' ) {
-      let postData:string;
-      req.on('data', (data) => { postData = (postData===undefined)?data: postData+data; });
-      req.on('end',  () => { try { //console.log(`perfectNumberServer, bericht ontvangen  ${postData}`);
-                                   const msg:Message = JSON.parse(postData);
-                                   numberAndSumOfDivisorArray.push(msg);
-                                   tryResolver();
-                                   res.writeHead(200, "OK", httpHeaders);
-                                   res.end();
-                             }
-                             catch (err) {
-                                   res.writeHead(400, "wrong message", httpHeaders);
-                             } } );
-      return;
-   }
-   res.writeHead(404, "page not found", httpHeaders);
-}
+const httpServer:http.Server = http.createServer(
+  (req,res) => {
+     let body = '';
+     req.on('data', (chunk:string) => body += chunk );
+     req.on('end',  () => { const msg = JSON.parse(body);
+                            if ( msg && msg.name === 'RESULT' && msg.sumOfDivisors === msg.valueToCalculate ){
+                               perfectNumberArray.push(msg.valueToCalculate);
+                            } else {
+                               messageResolver(JSON.parse(body));
+                            }
+                            res.write("OK");
+                            res.end(); } );
+  }
+);
 
-const httpServerPerfectNumber:http.Server = http.createServer(httpPerfectNumberServerFunction);
-const start:(port:number)=>void = (p) => httpServerPerfectNumber.listen(p);
-
-function terminate(){
-   setTimeout( () => httpServerPerfectNumber.close(), 50 );
-}
-
-var resolver: ((item: Message) => void) | null = null;
-
-function tryResolver() {
-   if ( resolver ) {
-      const item = numberAndSumOfDivisorArray.shift();
-      if (item) resolver(item);
-   }
-}
-
-async function getMessage(): Promise<Message> {
-   const promise = new Promise<Message>( resolve => resolver = resolve );
-   tryResolver();
+async function waitForMessage():Promise<any>{
+   let promise = new Promise<any>( resolve => messageResolver = resolve );
    return promise;
 }
 
-const perfectNumberServer = { start: start
-,                         terminate: terminate
-,                        getMessage: getMessage
+async function sendMessage (host:string, port:number,msg:any) {
+    let resolver: () => void;
+    const promise = new Promise( resolve => resolver = resolve );
+    const httpInfo = { url: `http://${host}:${port}`
+                 , headers: httpHeaders
+                    , body: msg
+                    , json: true };
+    request.post( httpInfo, () => resolver() );
+    return promise;
 }
 
 async function startSend(totalNumbers:number, groupSize:number, host:string, port:number){
    let index=1;
    for ( let i=0; i<totalNumbers; i += groupSize ){
-      //console.log(`perfectNumberServer, sending ${i}`);
-      const msg = new CALC(host,port,i,(i+groupSize-1));
+      // console.log(`perfectNumberServer, sending ${i}`);
+      // hostFrom:string  portFrom:number  valueToCalculateFrom:number   valueToCalculateTo:number  CALC.name
+      const msg = {name:'CALC',hostFrom:host,portFrom:port,valueToCalculateFrom:i,valueToCalculateTo:(i+groupSize-1)};
       await sendMessage(host, port+index, msg);
       index++;
       if ( index > 5 ) index = 1;
    }
    // indicate all numbers are send
    for ( let i=1; i < 6; i++){
-      await sendMessage(host,port+i, new BYE(host,port) );
+      // export class BYE extends Message { constructor(hostFrom:string, portFrom:number) { super(BYE.name,hostFrom,portFrom);
+      await sendMessage(host,port+i, {name:'BYE',hostFrom:host,portFrom:port} );
    }
 }
 
@@ -71,17 +57,16 @@ const perfectNumberArray:number[] = [];
 
 async function executeReceive(){
    var   byeCounter=0;
-   var   teller = 0;
    while ( byeCounter < 5 ){
-      const msg = await perfectNumberServer.getMessage();
-      if ( msg && msg.name === RESULT.name && (<RESULT>msg).sumOfDivisors === (<RESULT>msg).valueToCalculate )
-         //console.log(`perfect number ${(<RESULT>msg).valueToCalculate}`);
-         perfectNumberArray.push((<RESULT>msg).valueToCalculate);
-      if ( msg && msg.name === BYE.name ) {
+      const msg = await waitForMessage();
+      //if ( msg && msg.name === 'RESULT' && msg.sumOfDivisors === msg.valueToCalculate )
+      //console.log(`perfect number ${(<RESULT>msg).valueToCalculate}`);
+      //   perfectNumberArray.push(msg.valueToCalculate);
+      if ( msg && msg.name === 'BYE' ) {
          byeCounter++;
       }
    }
-   perfectNumberServer.terminate();
+   setTimeout( () => httpServer.close(), 50 );
 }
 
 async function starter(pars:string[]){
@@ -95,7 +80,7 @@ async function starter(pars:string[]){
      totalNumbers = Number(pars[4]);
      groupSize = Number(pars[5]);
    }
-   perfectNumberServer.start(port);
+   httpServer.listen(port);
    await startSend(totalNumbers,groupSize,host,port);
    await executeReceive();
    fs.appendFile('../log/perfectNumberResults.txt', `${totalNumbers}-${groupSize}-->${perfectNumberArray} \n`, (err) => { if (err) throw err; } );

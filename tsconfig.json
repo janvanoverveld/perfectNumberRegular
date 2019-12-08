@@ -12,9 +12,6 @@
   "files": [
     "perfectNumberServer.ts",
     "sumOfDivisorsServer.ts",
-    "sendMessage.ts",
-    "Messages.ts",
-    "start.ts",
-    "generateTimingResults.ts"
+    "start.ts"
     ]
 }
